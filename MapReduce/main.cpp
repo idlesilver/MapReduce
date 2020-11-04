@@ -120,9 +120,9 @@ int main()
 	//Table t;
 	//Table t2;
 	//Table t3;
-	auto pred = [](auto v) { return v[0] == "a"; };
-	Selector<decltype(pred)> sel(pred);
-	MapReduce<Selector<decltype(pred)>> mr(world, sel);
+	// auto pred = [](auto v) { return v[0] == "a"; };
+	// Selector<decltype(pred)> sel(pred);
+	// MapReduce<Selector<decltype(pred)>> mr(world, sel);
 	//Projector proj({ 0, 1, 3 });
 
 
