@@ -32,8 +32,11 @@ void optimize_join(std::vector<Table>& input)
 	}
 	for (const auto& p : list)
 	{
+		// 每次对full reducer list中的一对(consumer,ear)做semijoin
 		for (auto t : input)
 			t.print();
+
+		// 找到两个relation中共有的属性
 		std::vector<int> param1;
 		std::vector<int> param2;
 		for (int i = 0; i < p.first.size(); ++i)
@@ -42,6 +45,7 @@ void optimize_join(std::vector<Table>& input)
 			{
 				if (p.first[i] == p.second[j])
 				{
+					// 只找相同的attr做semijoin
 					param1.push_back(i);
 					param2.push_back(j);
 				}
@@ -53,6 +57,9 @@ void optimize_join(std::vector<Table>& input)
 		for (int i : param2)
 			std::cout << i << ' ';
 		std::cout << std::endl;*/
+		
+		// 从table中找到(consumer,ear)对应的原relation (attr & tuples)
+		// 这里的consumer,ear只有attr的记录
 		int t1 = 0;
 		int t2 = 0;
 		for (int i = 0; i < input.size(); ++i)
@@ -63,6 +70,8 @@ void optimize_join(std::vector<Table>& input)
 				t2 = i;
 		}
 		//std::cout << t1 << ' ' << t2;
+
+		// 执行优化的semijoin（attr数量已经减少了，即param1和param2）
 		MapReduce<SemiJoiner> sj(world, SemiJoiner(param1, param2));
 		auto&& res = sj.start({ input[t1], input[t2] });
 		std::cout << "semi-join " << t1 << std::endl;
@@ -112,6 +121,10 @@ void optimize_join(std::vector<Table>& input)
 	table.print();
 }
 
+void join(std::vector<Table>& input){
+
+}
+
 int main()
 {
 	mpi::environment env;
@@ -159,7 +172,7 @@ int main()
 	
 	auto t = Table(std::vector<std::vector<std::string>>
 	{
-		std::vector<std::string>{"a", "1", "1"},
+			std::vector<std::string>{"a", "1", "1"},
 			std::vector<std::string>{"a", "2", "1"},
 			std::vector<std::string>{"b", "3", "2"},
 			std::vector<std::string>{"b", "4", "2"},
@@ -168,7 +181,7 @@ int main()
 	}, { "A", "B", "C" });
 	auto t2 = Table(std::vector<std::vector<std::string>>
 	{
-		std::vector<std::string>{"1", "!", "1"},
+			std::vector<std::string>{"1", "!", "1"},
 			std::vector<std::string>{"2", "@", "1"},
 			std::vector<std::string>{"3", "#", "3"},
 			std::vector<std::string>{"3", "$", "5"},
@@ -177,7 +190,7 @@ int main()
 	}, { "C", "D","E" });
 	auto t3 = Table(std::vector<std::vector<std::string>>
 	{
-		std::vector<std::string>{"a", "1", "u"},
+			std::vector<std::string>{"a", "1", "u"},
 			std::vector<std::string>{"a", "1", "i"},
 			std::vector<std::string>{"b", "1", "o"},
 			std::vector<std::string>{"c", "5", "j"},
@@ -186,7 +199,7 @@ int main()
 	}, {"A", "E", "F" });
 	auto t4 = Table(std::vector<std::vector<std::string>>
 	{
-		std::vector<std::string>{"a", "1", "1"},
+			std::vector<std::string>{"a", "1", "1"},
 			std::vector<std::string>{"b", "2", "1"},
 			std::vector<std::string>{"b", "1", "2"},
 			std::vector<std::string>{"c", "3", "3"},
