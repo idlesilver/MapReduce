@@ -26,6 +26,7 @@ public:
 		auto size = world->size();
 		auto rank = world->rank();
 		SplitType semi_table;
+		// map阶段：把table分为多份，传给从者（master，即rank0处理最后一份数据）
 		if (rank == 0)
 		{
 			for (int i = 1; i < size; ++i)
