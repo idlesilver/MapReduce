@@ -20,6 +20,7 @@ public:
 		SplitType res;
 		auto first_split = input.first.split(size, rank);
 		auto second_split = input.second.split(size, rank);
+		// 把要做semijoin的两张表的tuple合并成一个vector，并用int0/1来标记表来源
 		for (auto& i : first_split)
 		{
 			res.emplace_back(0, i);
@@ -35,28 +36,28 @@ public:
 	{
 		for (auto& row : value)
 		{
-			if (row.first == 0)
+			if (row.first == 0) // 来自第一张表
 			{
 				MapKeyType new_key;
 				std::vector<std::string> new_value;
-				for (int i = 0; i < row.second.size(); ++i)
+				for (int i = 0; i < row.second.size(); ++i) // 遍历第一张表的tuple（i是attr的index
 				{
-					if (std::find(first.begin(), first.end(), i) != first.end())
+					if (std::find(first.begin(), first.end(), i) != first.end()) // 如果在化简后的attr中
 					{
-						new_key.push_back(row.second[i]);
+						new_key.push_back(row.second[i]); // key记录的是化简后的attr对应的value
 					}
-					new_value.push_back(row.second[i]);
+					new_value.push_back(row.second[i]); // value记录的是所有的value
 				}
 				c.write(new_key, std::pair<int, std::vector<std::string>>(0, new_value));
 			}
-			if (row.first == 1)
+			if (row.first == 1) // 来自第二张表
 			{
 				MapKeyType new_key;
 				for (int i = 0; i < row.second.size(); ++i)
 				{
 					if (std::find(second.begin(), second.end(), i) != second.end())
 					{
-						new_key.push_back(row.second[i]);
+						new_key.push_back(row.second[i]); // 只记录化简后的attr对应的value
 					}
 				}
 				c.write(new_key, std::pair<int, std::vector<std::string>>(1, std::vector<std::string>{}));
@@ -86,6 +87,6 @@ public:
 		c.write(key, table);
 	}
 private:
-	std::vector<int> first;
-	std::vector<int> second;
+	std::vector<int> first;	// 第一张表的化简后attr的index
+	std::vector<int> second;// 第一张表的化简后attr的index
 };

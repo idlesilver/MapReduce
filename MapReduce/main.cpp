@@ -15,12 +15,17 @@ void optimize_join(std::vector<Table>& input)
 {
 	mpi::communicator world;
 	std::vector<std::vector<std::string>> attrs;
+
+	// acyclicity的reducer，优化属性的个数
 	for (const auto& t : input)
 	{
 		attrs.push_back(t.attribute());
 	}
 	FullReducer reducer(attrs);
-	auto list = reducer.build();
+	auto list = reducer.build(); // 返回的list是做semijoin的顺序
+
+	// 显示做semijoin的表的属性值；
+	std::cout << "attributes of tables, in the order of semijoin sequence" << std::endl;
 	for (auto i : list)
 	{
 		for (auto j : i.first)
@@ -30,9 +35,13 @@ void optimize_join(std::vector<Table>& input)
 			std::cout << j << ' ';
 		std::cout << std::endl;
 	}
+
+	// 根据reducer给的顺序做semijoin，优化dangling items
+	// 每次对full reducer list中的一对(consumer,ear)做semijoin
 	for (const auto& p : list)
 	{
-		// 每次对full reducer list中的一对(consumer,ear)做semijoin
+		// 显示semijoin优化前的原表
+		std::cout << "original tables before semijoin" << std::endl;
 		for (auto t : input)
 			t.print();
 
@@ -74,15 +83,31 @@ void optimize_join(std::vector<Table>& input)
 		// 执行优化的semijoin（attr数量已经减少了，即param1和param2）
 		MapReduce<SemiJoiner> sj(world, SemiJoiner(param1, param2));
 		auto&& res = sj.start({ input[t1], input[t2] });
-		std::cout << "semi-join " << t1 << std::endl;
+		// 显示semijoin更新后的左表
+		std::cout << "semi-join " << t1 << " <-- " << t2 << std::endl;
 		res.print();
+
+		// 参与semijoin的左表更新（删掉了dangling  itemsitems
 		input[t1].update(std::move(res));
 	}
-	auto attr = input[0].attribute();
-	auto table = input[0];
+
+	// 显示semijoin优化后的原
+	std::cout << "optimized tables after semijoin" << std::endl;
+	for (auto t : input)
+		t.print();
+
+
+	// 通过semijoin后，dangling items都没了，开始做join（此处是natural join）
+	// 指定join的对象：表0
+	int target_table_idx = 0;
+	auto attr = input[target_table_idx].attribute();
+	auto table = input[target_table_idx];
 	table.print();
+
+	// 其余每个表都和目标表分别做join
 	for (int i = 1; i < input.size(); ++i)
 	{
+		// 找到两个relation中共有的属性
 		std::vector<int> param1;
 		std::vector<int> param2;
 		auto attr2 = input[i].attribute();
@@ -92,6 +117,7 @@ void optimize_join(std::vector<Table>& input)
 			{
 				if (attr[j] == attr2[k])
 				{
+					// 只找相同的attr做semijoin
 					param1.push_back(j);
 					param2.push_back(k);
 				}
@@ -99,9 +125,7 @@ void optimize_join(std::vector<Table>& input)
 		}
 		MapReduce<Joiner> sj(world, Joiner(param1, param2));
 		auto&& res = sj.start({ table, input[i] });
-		res.print();
-		table.update(res);
-		std::cout << "join " << world.rank() << std::endl;
+		// 更新表，扩展属性之后的表头
 		std::vector<std::string> new_attr;
 		for (int j = 0; j < param1.size(); ++j)
 			new_attr.push_back(attr[param1[j]]);
@@ -111,14 +135,19 @@ void optimize_join(std::vector<Table>& input)
 		for (int j = 0; j < attr2.size(); ++j)
 			if (std::find(param2.begin(), param2.end(), j) == param2.end())
 				new_attr.push_back(attr2[j]);
+
+		// 显示join后的表
+		std::cout << "join bewteen table " << target_table_idx << " and " << i << " processed in " << world.rank() << std::endl;
 		for (auto a : new_attr)
 		{
 			std::cout << a << ' ';
 		}
 		std::cout << std::endl;
 		attr = new_attr;
+		res.print();
+		// 更新表（每次做join，目标表属性只可能变大
+		table.update(res);
 	}
-	table.print();
 }
 
 void join(std::vector<Table>& input){
@@ -129,46 +158,6 @@ int main()
 {
 	mpi::environment env;
 	mpi::communicator world;
-
-	//Table t;
-	//Table t2;
-	//Table t3;
-	// auto pred = [](auto v) { return v[0] == "a"; };
-	// Selector<decltype(pred)> sel(pred);
-	// MapReduce<Selector<decltype(pred)>> mr(world, sel);
-	//Projector proj({ 0, 1, 3 });
-
-
-	/*if (world.rank() == 0)
-	{
-		t = Table(std::vector<std::vector<std::string>>
-		{
-			std::vector<std::string>{"a", "1", "2", "3"},
-				std::vector<std::string>{"a", "1", "2", "3"},
-				std::vector<std::string>{"b", "1", "2", "3"},
-				std::vector<std::string>{"c", "1", "2", "3"},
-				std::vector<std::string>{"b", "1", "2", "3"},
-				std::vector<std::string>{"a", "1", "2", "3"},
-				std::vector<std::string>{"a", "1", "2", "3"},
-				std::vector<std::string>{"d", "1", "2", "3"},
-				std::vector<std::string>{"b", "1", "2", "3"},
-		}, { "A", "B", "C", "D" });
-		t2 = Table(std::vector<std::vector<std::string>>
-		{
-			std::vector<std::string>{"a", "1"},
-				std::vector<std::string>{"b", "1"},
-				std::vector<std::string>{"b", "2"},
-				std::vector<std::string>{"c", "4"},
-		}, { "A", "B" });
-		t3 = Table(std::vector<std::vector<std::string>>
-		{
-			std::vector<std::string>{"1", "A"},
-				std::vector<std::string>{"1", "B"},
-				std::vector<std::string>{"2", "C"},
-				std::vector<std::string>{"3", "C"},
-		}, { "B", "C" });
-
-	}*/
 	
 	auto t = Table(std::vector<std::vector<std::string>>
 	{
@@ -207,16 +196,11 @@ int main()
 			std::vector<std::string>{"d", "2", "3"},
 	}, { "A", "C", "E" });
 	std::vector<Table> tables = { t, t2, t3, t4 };
-	optimize_join(tables);
-	//mr.start(t);
 
-	//MapReduce<Projector> mr2(world, { 0, 1, 3 });
-	//mr2.start(t);
+	//for (int i = 0; i < 10000; i++) {
+		optimize_join(tables);
+	//}
 
-	//MapReduce<Joiner> mr3(world, Joiner({ 1 }, { 0 }));
-	//mr3.start({ t2,t3 });
-	//MapReduce<SemiJoiner> mr4(world, SemiJoiner({ 1 }, { 0 }));
-	//mr4.start({ t2, t3 });
 	return 0;
 }
 

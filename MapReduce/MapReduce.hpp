@@ -40,7 +40,10 @@ public:
 			world->recv(0, 0, semi_table);
 		}
 		//Table(semi_table).print();
+		// 从者处理各部分数据，并且都写到各线程的实例c中
 		task.map(semi_table, c);
+
+		// 从实例c中提取map的总结果
 		auto map_res = c.get_map_context();
 		if (rank == 0)
 		{
@@ -55,6 +58,8 @@ public:
 		{
 			world->send(0, 1, map_res);
 		}
+
+		// 把map的总结果合成一个，并重新分配（shuffle）准备做reduce
 		CombineType combine_res;
 		if (rank == 0)
 		{
@@ -66,17 +71,21 @@ public:
 				auto end = combine_res.begin() + combine_res.size() / size * (i + 1);
 				world->send(i, 2, CombineType(begin, size - 1 == i ? combine_res.end() : end));
 			}
-			combine_res = CombineType(combine_res.begin(), combine_res.begin() + combine_res.size() / size);
+			combine_res = CombineType(combine_res.begin(), combine_res.begin() + combine_res.size() / size); // 最后一份留给自己做
 		}
 		else
 		{
 			world->recv(0, 2, combine_res);
 		}
+
+		// 根据分配到的 （combine的结果）做reduce
 		for (auto& p : combine_res)
 		{
 			task.reduce(p.first, p.second, c);
 		}
 		auto reduce_res = c.get_reduce_context();
+
+		// 合并所有的reduce结果
 		if (rank == 0)
 		{
 			std::vector<std::pair<ReduceKeyType, ReduceValueType>> other;
@@ -89,7 +98,7 @@ public:
 			ReduceValueType res = std::accumulate(
 				reduce_res.begin(), reduce_res.end(), 
 				ReduceValueType(), 
-				[](auto a, auto b) {return a + b.second; });
+				[](auto a, auto b) {return a + b.second; }); // 表不断变大，不停插入原始tuple（所有的value），加号重新定义，是v（value即tuple）的扩展
 			//res.print();
 			return res;
 		}
@@ -153,5 +162,5 @@ private:
 	mpi::communicator* world;
 	//Table table;
 	Task task;
-	Context<MapKeyType, MapValueType, ReduceKeyType, ReduceValueType> c;
+	Context<MapKeyType, MapValueType, ReduceKeyType, ReduceValueType> c; // c的作用是记录map和reduce
 };
