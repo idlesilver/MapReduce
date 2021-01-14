@@ -154,6 +154,7 @@ void optimize_join(std::vector<Table>& input)
 		// 更新表（每次做join，目标表属性只可能变大
 		table.update(res);
 	}
+	//table.print();
 }
 
 void join(std::vector<Table>& input){
@@ -210,7 +211,7 @@ void join(std::vector<Table>& input){
 		// 更新表（每次做join，目标表属性只可能变大
 		table.update(res);
 	}
-
+	//table.print();
 }
 
 int main()
@@ -256,16 +257,30 @@ int main()
 	//}, { "A", "C", "E" });
 	//std::vector<Table> tables = { t, t2, t3, t4 };
 
-	Table basic = dataloader("C:\\OneDriveRoot\\OneDrive - International Campus, Zhejiang University\\computer\\competition\\bestpaycup2020\\dataset\\dataset1\\trainset\\");
-	Table ops = dataloader("C:\\OneDriveRoot\\OneDrive - International Campus, Zhejiang University\\computer\\competition\\bestpaycup2020\\dataset\\dataset1\\trainset\\");
-	Table trans = dataloader("C:\\OneDriveRoot\\OneDrive - International Campus, Zhejiang University\\computer\\competition\\bestpaycup2020\\dataset\\dataset1\\trainset\\");
-	std::vector<Table> tables = { basic, ops, trans };
+	//auto test = Table(std::vector<std::vector<std::string>>
+	//{
+	//		std::vector<std::string>{"6800", "1.0"},
+	//		std::vector<std::string>{"23487", "1.0"},
+	//}, { "user", "sex"});
+
+	//auto test1 = Table(std::vector<std::vector<std::string>>
+	//{
+	//		std::vector<std::string>{"6800", "24877"},
+	//		std::vector<std::string>{"23487", "24895"},
+	//}, { "user", "age" });
+
+	if (world.rank() == 0) {
+		Table base = dataloader("C:\\Users\\51284\\Desktop\\train_base.csv");
+		Table ops = dataloader("C:\\Users\\51284\\Desktop\\train_op.csv");
+		Table trans = dataloader("C:\\Users\\51284\\Desktop\\train_trans.csv");
+		std::vector<Table> tables = { base, ops, trans };
+	}
 
 
 	std::cout << world.rank() << " in " << world.size() << std::endl;
 
 
-	int num_loop = 100;
+	int num_loop = 1;
 	clock_t start, end;
 	double endtime;
 	// semijoin优化
@@ -290,9 +305,9 @@ int main()
 	if (world.rank() == 0) {
 		//std::cout << "Total time:" << endtime << std::endl;		//s为单位
 		std::cout << "no optimization:" << endtime * 1000 << "ms" << std::endl;	//ms为单位
+		std::cout << std::endl;
 	}
 
-	std::cout << std::endl;
 
 	return 0;
 }
