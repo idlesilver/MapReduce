@@ -44,6 +44,9 @@
     <ClInclude Include="FullReducer.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="dataloader.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

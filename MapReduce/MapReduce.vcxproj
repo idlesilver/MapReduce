@@ -146,6 +146,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Context.hpp" />
+    <ClInclude Include="dataloader.hpp" />
     <ClInclude Include="FullReducer.hpp" />
     <ClInclude Include="Joiner.hpp" />
     <ClInclude Include="MapReduce.hpp" />
