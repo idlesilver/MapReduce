@@ -34,7 +34,8 @@ public:
 	{
 		for (auto& row : value)
 		{
-			if (row.first == 0)
+			if (row.first == 0) // 来自第一张表
+			//  (0, ("a1", "b1", "c1") )
 			{
 				MapKeyType new_key;
 				std::vector<std::string> new_value;

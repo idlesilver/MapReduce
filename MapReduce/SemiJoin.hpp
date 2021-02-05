@@ -37,20 +37,23 @@ public:
 		for (auto& row : value)
 		{
 			if (row.first == 0) // 来自第一张表
+			//  (0, ("a1", "b1", "c1") )
 			{
 				MapKeyType new_key;
 				std::vector<std::string> new_value;
 				for (int i = 0; i < row.second.size(); ++i) // 遍历第一张表的tuple（i是attr的index
 				{
-					if (std::find(first.begin(), first.end(), i) != first.end()) // 如果在化简后的attr中
+					if (std::find(first.begin(), first.end(), i) != first.end()) // 如果attr在化简后的attr_list中
 					{
 						new_key.push_back(row.second[i]); // key记录的是化简后的attr对应的value
 					}
 					new_value.push_back(row.second[i]); // value记录的是所有的value
 				}
 				c.write(new_key, std::pair<int, std::vector<std::string>>(0, new_value));
+				//    ("a1", "c1")									(0, ("a1", "b1", "c1") )
 			}
 			if (row.first == 1) // 来自第二张表
+			//  (1, ("a1", "d1") )
 			{
 				MapKeyType new_key;
 				for (int i = 0; i < row.second.size(); ++i)
@@ -61,6 +64,7 @@ public:
 					}
 				}
 				c.write(new_key, std::pair<int, std::vector<std::string>>(1, std::vector<std::string>{}));
+				//    ("a1")											(1, 空vector)
 			}
 		}
 	}
@@ -75,9 +79,9 @@ public:
 			if (val.first == 0)
 				first_table.push_back(val.second);
 			else
-				second_table.push_back(val.second);
+				second_table.push_back(val.second); // 这里放入的都是  空vector
 		}
-		if (first_table.empty() || second_table.empty())
+		if (first_table.empty() || second_table.empty()) // 如果对于同一个key，两表中有一表无数据，则全部内容被reduce掉（reduce dangling items）
 			return;
 		ReduceValueType table;
 		for (auto& i : first_table)

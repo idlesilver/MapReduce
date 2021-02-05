@@ -7,8 +7,9 @@ class FullReducer
 {
 public:
 	FullReducer(std::vector<std::vector<std::string>> a) : relations(a) {}
+	// [ [A,B,C], [A,B,D] , [B,C,D] ]
 	std::vector<std::pair<std::vector<std::string>, std::vector<std::string>>> build()
-		// [ ( [A,B,C], [A,C,D] ), ( [A,B,C], [B,C,D] ), ( [A,B,C], [E,C,D] )]
+	// [ ( [A,B,C], [A,C,D] ), ( [A,B,C], [B,C,D] ), ( [A,B,C], [E,C,D] )]
 	{
 		while (relations.size() != 1)
 		{

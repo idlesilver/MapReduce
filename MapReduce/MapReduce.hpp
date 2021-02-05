@@ -43,8 +43,8 @@ public:
 		// 从者处理各部分数据，并且都写到各线程的实例c中
 		task.map(semi_table, c);
 
-		// 从实例c中提取map的总结果
-		auto map_res = c.get_map_context();
+		// 从实例c中提取map的总结果，传到master
+		auto map_res = c.get_map_context();  //  MapContextType = std::vector<std::pair<MapKeyType, MapValueType>>;
 		if (rank == 0)
 		{
 			MapContextType other;
@@ -65,6 +65,7 @@ public:
 		{
 			combine_res = combine(map_res);
 			//print_combine(combine_res);
+			// NOTE: 这里的shuffle不是均分的，不同key下内容量不同
 			for(int i = 1; i < size; ++i)
 			{
 				auto begin = combine_res.begin() + combine_res.size() / size * i;
@@ -111,10 +112,11 @@ public:
 
 	CombineType combine(MapContextType& map_context)
 	{
-		std::sort(map_context.begin(), map_context.end(), [](auto a, auto b) {return a.first > b.first; });
-		MapKeyType curr = map_context.front().first;
+		//  MapContextType = std::vector<std::pair<MapKeyType, MapValueType>>;
+		std::sort(map_context.begin(), map_context.end(), [](auto a, auto b) {return a.first > b.first; }); // 按照key来排序，keytype是vector<string>
+		MapKeyType curr = map_context.front().first; // 当前的key。TODO: 如果某个key只存在于table1中，对semijoin而言可以直接省略
 		CombineType res;
-		std::vector<MapValueType> same_key;
+		std::vector<MapValueType> same_key;	// 有相同key的values（这里的value是：(0, ("a1", "b1", "c1") ) / (1, 空vector)  ）
 		for (auto i = map_context.begin(); i != map_context.end(); ++i)
 		{
 			if (i->first == curr)
@@ -123,7 +125,7 @@ public:
 			}
 			else
 			{
-				res.emplace_back(curr, same_key);
+				res.emplace_back(curr, same_key); // 当前的key和其所有values
 				same_key.clear();
 				same_key.push_back(i->second);
 				curr = i->first;
